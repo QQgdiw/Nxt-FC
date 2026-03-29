@@ -1,0 +1,40 @@
+module_name: as5600
+type: driver
+command_name: as5600
+
+category: sensor
+
+info:
+    description: |
+        I2C bus driver for the AS5600 magnetic rotary position sensor.
+
+        This driver communicates with the AS5600 over I2C to read the 12-bit
+        absolute angle register and the magnet status register. It automatically
+        calculates angular velocity by differentiating the angle over time,
+        handling the 0-360 degree boundary wrap.
+
+        The data is published via the standard `sensor_encoder` uORB topic.
+
+# I2CSPIDriverBase 基类会自动解析并处理以下标准命令
+commands:
+    - command: start
+      description: Start the driver and begin polling the sensor
+      args:
+          - name: -X
+            description: Start on external I2C bus (e.g., the GPS/Compass port)
+            optional: true
+          - name: -I
+            description: Start on internal I2C bus
+            optional: true
+          - name: -b
+            description: Specific I2C bus number to use
+            optional: true
+          - name: -f
+            description: Polling frequency in Hz (determines the WorkQueue schedule)
+            optional: true
+
+    - command: stop
+      description: Stop the driver and unpublish the uORB topic
+
+    - command: status
+      description: Print driver status, running frequency, and I2C error statistics

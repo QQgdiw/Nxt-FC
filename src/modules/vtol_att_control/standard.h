@@ -83,7 +83,17 @@ private:
 	DEFINE_PARAMETERS_CUSTOM_PARENT(VtolType,
 					(ParamFloat<px4::params::VT_PSHER_SLEW>) _param_vt_psher_slew,
 					(ParamFloat<px4::params::VT_B_TRANS_RAMP>) _param_vt_b_trans_ramp,
-					(ParamFloat<px4::params::FW_PSP_OFF>) _param_fw_psp_off
+					(ParamFloat<px4::params::FW_PSP_OFF>) _param_fw_psp_off,
+					(ParamFloat<px4::params::VT_MECH_ANG_FW>) _param_vt_mech_ang_fw,
+    					(ParamFloat<px4::params::VT_MECH_ANG_MC>) _param_vt_mech_ang_mc,
+    					(ParamFloat<px4::params::VT_MECH_CMD_FW>) _param_vt_mech_cmd_fw,
+    					(ParamFloat<px4::params::VT_MECH_CMD_MC>) _param_vt_mech_cmd_mc
 				       )
+	/********** 下面是新增的成员变量和函数声明 **********/
+	int _encoder_sub{-1};
+    	uORB::Publication<actuator_servos_s> _mechanism_servo_pub{ORB_ID(actuator_servos)};
+
+    	float _current_mechanism_angle{0.0f};
+
 };
 #endif

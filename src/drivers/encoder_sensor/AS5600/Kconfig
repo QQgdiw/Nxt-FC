@@ -1,0 +1,5 @@
+menuconfig CONFIG_DRIVERS_ENCODER_SENSOR_AS5600
+	bool "AS5600"
+	default n
+	---help---
+		Enable support for AS5600

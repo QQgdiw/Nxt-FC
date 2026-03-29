@@ -137,9 +137,8 @@ if [[ $INSTALL_NUTTX == "true" ]]; then
 		libisl-dev \
 		libmpc-dev \
 		libmpfr-dev \
-		libncurses5 \
-		libncurses5-dev \
-		libncursesw5-dev \
+		libncurses6 \
+		libncurses-dev \
 		libtool \
 		pkg-config \
 		screen \
@@ -207,6 +206,8 @@ if [[ $INSTALL_SIM == "true" ]]; then
 		java_version=13
 	elif [[ "${UBUNTU_RELEASE}" == "22.04" ]]; then
 		java_version=11
+	elif [[ "${UBUNTU_RELEASE}" == "24.04" ]]; then
+                java_version=21
 	elif [[ "${UBUNTU_RELEASE}" == "21.3" ]]; then
 		java_version=11
 	else
@@ -264,7 +265,7 @@ if [[ $INSTALL_SIM == "true" ]]; then
 
 	sudo DEBIAN_FRONTEND=noninteractive apt-get -y --quiet --no-install-recommends install \
 		dmidecode \
-		$gazebo_packages \
+		gz-harmonic \
 		gstreamer1.0-plugins-bad \
 		gstreamer1.0-plugins-base \
 		gstreamer1.0-plugins-good \

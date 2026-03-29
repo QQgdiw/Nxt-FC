@@ -342,6 +342,7 @@ VtolAttitudeControl::Run()
 		_airspeed_validated_sub.update(&_airspeed_validated);
 		_tecs_status_sub.update(&_tecs_status);
 		_land_detected_sub.update(&_land_detected);
+		_encoder_sub.update(&sensor_encoder);		// 新增订阅编码器数据
 
 		if (_home_position_sub.updated()) {
 			home_position_s home_position;

@@ -106,3 +106,69 @@ PARAM_DEFINE_FLOAT(VT_B_TRANS_RAMP, 3.0f);
  * @group VTOL Attitude Control
  */
 PARAM_DEFINE_FLOAT(VT_PSHER_SLEW, 0.33f);
+
+/**
+ * Mechanism Target Angle in Fixed Wing Mode
+ *
+ * The target angle (in radians) for the custom AS5600 mechanism when in FW mode.
+ *
+ * @group VTOL Attitude Control
+ * @unit rad
+ * @min -6.28
+ * @max 6.28
+ * @decimal 2
+ * @increment 0.05
+ */
+PARAM_DEFINE_FLOAT(VT_MECH_ANG_FW, 1.0f);
+
+/**
+ * Mechanism Target Angle in Multicopter Mode
+ *
+ * The target angle (in radians) for the custom AS5600 mechanism when in MC mode.
+ *
+ * @group VTOL Attitude Control
+ * @unit rad
+ * @min -6.28
+ * @max 6.28
+ * @decimal 2
+ * @increment 0.05
+ */
+PARAM_DEFINE_FLOAT(VT_MECH_ANG_MC, 3.0f);
+
+/**
+ * Mechanism Output Command in Fixed Wing Mode
+ *
+ * The logic output command [-1.0, 1.0] to drive the mechanism to FW position.
+ *
+ * @group VTOL Attitude Control
+ * @min -1.0
+ * @max 1.0
+ * @decimal 2
+ * @increment 0.1
+ */
+PARAM_DEFINE_FLOAT(VT_MECH_CMD_FW, 1.0f);
+
+/**
+ * Mechanism Output Command in Multicopter Mode
+ *
+ * The logic output command [-1.0, 1.0] to drive the mechanism to MC position.
+ *
+ * @group VTOL Attitude Control
+ * @min -1.0
+ * @max 1.0
+ * @decimal 2
+ * @increment 0.1
+ */
+PARAM_DEFINE_FLOAT(VT_MECH_CMD_MC, -1.0f);
+
+/**
+ * Enable AS5600 mechanism encoder
+ *
+ * If enabled, the AS5600 magnetic encoder driver will be started
+ * during the system boot process to read mechanism angles.
+ *
+ * @group Sensors
+ * @boolean
+ * @reboot_required true
+ */
+PARAM_DEFINE_INT32(SENS_EN_AS5600, 1);

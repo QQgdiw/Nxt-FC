@@ -84,6 +84,8 @@
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_thrust_setpoint.h>
 #include <uORB/topics/vehicle_torque_setpoint.h>
+#include <uORB/topics/sensor_encoder.h>
+#include <uORB/topics/actuator_servos.h>
 #include "standard.h"
 #include "tailsitter.h"
 #include "tiltrotor.h"
@@ -169,6 +171,7 @@ private:
 	uORB::Subscription _vehicle_control_mode_sub{ORB_ID(vehicle_control_mode)};
 	uORB::Subscription _vehicle_cmd_sub{ORB_ID(vehicle_command)};
 	uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};
+	uORB::Subscription _encoder_sub{ORB_ID(sensor_encoder)};
 
 	uORB::Publication<normalized_unsigned_setpoint_s>	_flaps_setpoint_pub{ORB_ID(flaps_setpoint)};
 	uORB::Publication<normalized_unsigned_setpoint_s>	_spoilers_setpoint_pub{ORB_ID(spoilers_setpoint)};

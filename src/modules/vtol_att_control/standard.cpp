@@ -53,8 +53,7 @@ Standard::Standard(VtolAttitudeControl *attc) :
 {
 }
 
-void
-Standard::parameters_update()
+void Standard::parameters_update()
 {
 	VtolType::updateParams();
 
@@ -91,9 +90,29 @@ void Standard::update_vtol_state()
 
 		} else if (_vtol_mode == vtol_mode::TRANSITION_TO_FW) {
 			// failsafe back to mc mode
-			_vtol_mode = vtol_mode::MC_MODE;
-			mc_weight = 1.0f;
-			_pusher_throttle = 0.0f;
+			// 此处需要增加从TRANSITION_TO_FW切换为MC_MODE的条件处理
+			// 判断编码器当前角度是否已经达到MC_MODE的目标角度
+
+			bool updated;
+    			orb_check(_encoder_sub, &updated);
+    			if (updated) {
+        			sensor_encoder_s encoder_data;
+        			orb_copy(ORB_ID(sensor_encoder), _encoder_sub, &encoder_data);
+        			_current_mechanism_angle = encoder_data.position_rad;
+    			}
+			float target_angle = _param_vt_mech_ang_mc.get();
+
+			float output_cmd = 0.0f;
+
+			if (target_angle > _current_mechanism_angle) {
+				output_cmd = _param_vt_mech_cmd_mc.get();
+			}
+			else{
+				_vtol_mode = vtol_mode::MC_MODE;
+				mc_weight = 1.0f;
+				_pusher_throttle = 0.0f;
+				output_cmd = 0.0f;
+			}
 
 		} else if (_vtol_mode == vtol_mode::TRANSITION_TO_MC) {
 			// speed exit condition: use ground if valid, otherwise airspeed
@@ -110,7 +129,29 @@ void Standard::update_vtol_state()
 
 			const bool exit_backtransition_time_condition = _time_since_trans_start > _param_vt_b_trans_dur.get();
 
-			if (can_transition_on_ground() || exit_backtransition_speed_condition || exit_backtransition_time_condition) {
+			// 此处需要增加从TRANSITION_TO_MC切换为MC_MODE的条件处理
+			// 判断编码器当前角度是否已经达到MC_MODE的目标角度
+
+			bool updated;
+    			orb_check(_encoder_sub, &updated);
+    			if (updated) {
+        			sensor_encoder_s encoder_data;
+        			orb_copy(ORB_ID(sensor_encoder), _encoder_sub, &encoder_data);
+        			_current_mechanism_angle = encoder_data.position_rad;
+    			}
+			float target_angle = _param_vt_mech_ang_mc.get();
+
+			float output_cmd = 0.0f;
+
+			bool exit_backtransition_encoder_condition = false;
+			if (target_angle > _current_mechanism_angle) {
+				output_cmd = _param_vt_mech_cmd_mc.get();
+			}
+			else{
+				exit_backtransition_encoder_condition = true;
+				output_cmd = 0.0f;
+			}
+			if ((can_transition_on_ground() || exit_backtransition_speed_condition || exit_backtransition_time_condition) && exit_backtransition_encoder_condition) {
 				_vtol_mode = vtol_mode::MC_MODE;
 			}
 		}
@@ -132,10 +173,29 @@ void Standard::update_vtol_state()
 		} else if (_vtol_mode == vtol_mode::TRANSITION_TO_FW) {
 
 			if (isFrontTransitionCompleted()) {
-				_vtol_mode = vtol_mode::FW_MODE;
+				// 这里需要增加切换到FW_MODE的条件处理
+				// 判断编码器当前角度是否已经达到FW_MODE的目标角度
+				bool updated;
+    				orb_check(_encoder_sub, &updated);
+    				if (updated) {
+        				sensor_encoder_s encoder_data;
+        				orb_copy(ORB_ID(sensor_encoder), _encoder_sub, &encoder_data);
+        				_current_mechanism_angle = encoder_data.position_rad;
+    				}
+				float target_angle = _param_vt_mech_ang_fw.get();
 
-				// don't set pusher throttle here as it's being ramped up elsewhere
-				_trans_finished_ts = hrt_absolute_time();
+				float output_cmd = 0.0f;
+
+				if (target_angle < _current_mechanism_angle) {
+					output_cmd = _param_vt_mech_cmd_fw.get();
+				}
+				else{
+					output_cmd = 0.0f;
+					_vtol_mode = vtol_mode::FW_MODE;
+
+					// don't set pusher throttle here as it's being ramped up elsewhere
+					_trans_finished_ts = hrt_absolute_time();
+				}
 			}
 		}
 	}
@@ -258,6 +318,7 @@ void Standard::update_transition_state()
 	_mc_pitch_weight = mc_weight;
 	_mc_yaw_weight = mc_weight;
 	_mc_throttle_weight = mc_weight;
+
 }
 
 void Standard::update_mc_state()
@@ -347,6 +408,12 @@ void Standard::fill_actuator_outputs()
 		_thrust_setpoint_0->xyz[0] = _vehicle_thrust_setpoint_virtual_fw->xyz[0];
 		break;
 	}
+
+	actuator_servos_s servo_cmd{};
+    	servo_cmd.timestamp = hrt_absolute_time();
+    	servo_cmd.control[6] = output_cmd;
+	servo_cmd.control[7] = -output_cmd;
+    	_mechanism_servo_pub.publish(servo_cmd);
 }
 
 void
