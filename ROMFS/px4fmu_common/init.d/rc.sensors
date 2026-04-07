@@ -233,6 +233,6 @@ then
 fi
 
 if param compare SENS_EN_AS5600 1
-	then
-		as5600 -X -q  start
-	fi
+then
+	as5600 -X -q  start
+fi

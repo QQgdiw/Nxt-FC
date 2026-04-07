@@ -1,5 +1,5 @@
 px4_add_module(
-    MODULE drivers__as5600
+    MODULE drivers__encoder_sensor__as5600
     MAIN as5600
     INCLUDES
     SRCS

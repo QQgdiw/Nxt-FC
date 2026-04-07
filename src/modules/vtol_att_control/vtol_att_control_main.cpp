@@ -205,6 +205,8 @@ void VtolAttitudeControl::vehicle_cmd_poll()
 void
 VtolAttitudeControl::quadchute(QuadchuteReason reason)
 {
+	return;
+	/*
 	if (!_vtol_vehicle_status.fixed_wing_system_failure) {
 		// only publish generic warning through mavlink to safe flash
 		mavlink_log_critical(&_mavlink_log_pub, "Quad-chute triggered\t");
@@ -252,6 +254,7 @@ VtolAttitudeControl::quadchute(QuadchuteReason reason)
 
 		_vtol_vehicle_status.fixed_wing_system_failure = true;
 	}
+	*/
 }
 
 void
@@ -342,7 +345,7 @@ VtolAttitudeControl::Run()
 		_airspeed_validated_sub.update(&_airspeed_validated);
 		_tecs_status_sub.update(&_tecs_status);
 		_land_detected_sub.update(&_land_detected);
-		_encoder_sub.update(&sensor_encoder);		// 新增订阅编码器数据
+		_encoder_sub.update(&_sensor_encoder);		// 新增订阅编码器数据
 
 		if (_home_position_sub.updated()) {
 			home_position_s home_position;
@@ -355,9 +358,33 @@ VtolAttitudeControl::Run()
 			}
 		}
 
+		vehicle_land_detected_s land_detected;
+		if (_vehicle_land_detected_sub.update(&land_detected)) {
+			_landed = land_detected.landed;
+		}
+
 		vehicle_status_poll();
 		action_request_poll();
 		vehicle_cmd_poll();
+
+		// // ====================================================================
+		// // 着陆互锁逻辑 (Land Detected Interlock)
+		// // 如果接收到了变形成漫游车(FW)的指令，但飞机不在地面上，则拦截
+		// // ====================================================================
+		// if (_transition_command == vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW && !_land_detected.landed) {
+
+		// // 强制将指令复位回多旋翼状态，拒绝执行变形
+		// _transition_command = vtol_vehicle_status_s::VEHICLE_VTOL_STATE_MC;
+
+		// // 限制打印频率，防止瞬间刷爆地面站和系统总线 (每2秒报警一次)
+		// static hrt_abstime last_land_warn_time = 0;
+
+		// if (hrt_absolute_time() - last_land_warn_time > 2000000) {
+		// 	mavlink_log_critical(&_mavlink_log_pub, "Action Denied: Must land before transforming to Rover!");
+		// 	last_land_warn_time = hrt_absolute_time();
+		// }
+		// }
+		// // ====================================================================
 
 		vehicle_air_data_s air_data;
 

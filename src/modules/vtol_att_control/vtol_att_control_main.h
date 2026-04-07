@@ -90,6 +90,8 @@
 #include "tailsitter.h"
 #include "tiltrotor.h"
 
+#include <uORB/topics/vehicle_land_detected.h>
+
 using namespace time_literals;
 
 extern "C" __EXPORT int vtol_att_control_main(int argc, char *argv[]);
@@ -208,6 +210,7 @@ private:
 	vehicle_local_position_setpoint_s	_local_pos_sp{};
 	vehicle_status_s 			_vehicle_status{};
 	vtol_vehicle_status_s 			_vtol_vehicle_status{};
+	sensor_encoder_s 			_sensor_encoder{};
 	float _home_position_z{NAN};
 
 	float _air_density{atmosphere::kAirDensitySeaLevelStandardAtmos};	// [kg/m^3]
@@ -242,4 +245,9 @@ private:
 		(ParamInt<px4::params::VT_TYPE>) _param_vt_type,
 		(ParamFloat<px4::params::VT_SPOILER_MC_LD>) _param_vt_spoiler_mc_ld
 	)
+
+	// 新增变量
+	uORB::Subscription _vehicle_land_detected_sub{ORB_ID(vehicle_land_detected)}; // 着陆检测订阅器
+	bool _landed{false}; // 存放当前是否在地面上的状态
+	hrt_abstime _last_land_warn_time{0}; // 记录上一次警告的时间，防止刷屏死机
 };

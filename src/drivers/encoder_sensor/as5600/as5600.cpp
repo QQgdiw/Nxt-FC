@@ -1,20 +1,17 @@
 #include "as5600.hpp"
 
-// 构造函数：初始化 I2C 速率为 400kHz (Fast Mode)，减少总线排队时间
 AS5600::AS5600(const I2CSPIDriverConfig &config) :
-    I2CSPIDriverBase(config)
+    device::I2C(config),
+    I2CSPIDriver<AS5600>(config)
 {
-    // PX4 默认 I2C 速率可能较低，这里强制提速
-    set_device_bus_clock(I2C_SPEED_FAST);
+
 }
 
 int AS5600::init()
 {
-    // 1. 先调用底层基类的初始化（它会去执行 probe() 检查芯片）
-    int ret = I2CSPIDriverBase::init();
-
+    int ret = I2C::init();
     if (ret != PX4_OK) {
-        return ret; // 如果找不到芯片，直接退出
+        return ret; // 如果探不到芯片，直接退出
     }
 
     // 2. 核心调度指令：要求操作系统每隔 10000 微秒 (即 100Hz) 自动调用一次 RunImpl()
@@ -33,7 +30,6 @@ int AS5600::probe()
     return ret;
 }
 
-// 核心循环任务
 void AS5600::RunImpl()
 {
     // 1. 读取 STATUS 寄存器 (磁铁健康状态)
@@ -63,7 +59,7 @@ void AS5600::RunImpl()
     if (_last_timestamp != 0) {
         float dt = (now - _last_timestamp) / 1e6f; // 转换为秒
         if (dt > 0.0f) {
-            float delta_angle = current_angle_rad - _last_last_angle_rad;
+            float delta_angle = current_angle_rad - _last_angle_rad;
 
             // 关键逻辑：处理 0-2PI 的边界跳变
             if (delta_angle < -M_PI_F) { delta_angle += 2.0f * M_PI_F; }
@@ -105,11 +101,13 @@ void AS5600::RunImpl()
     _debug_pub.publish(dbg_msg);
 }
 
-// --- 以下是 PX4 标准的实例化样板代码 ---
-
 I2CSPIDriverBase *AS5600::instantiate(const I2CSPIDriverConfig &config, int runtime_instance)
 {
-    AS5600 *instance = new AS5600(config);
+    // 拷贝一份配置，并强制塞入我们定义好的 AS5600 I2C 硬件地址 (0x36)
+    I2CSPIDriverConfig my_config = config;
+    my_config.i2c_address = AS5600_I2C_ADDR;
+
+    AS5600 *instance = new AS5600(my_config);
     if (!instance) {
         PX4_ERR("alloc failed");
         return nullptr;
@@ -119,6 +117,16 @@ I2CSPIDriverBase *AS5600::instantiate(const I2CSPIDriverConfig &config, int runt
         return nullptr;
     }
     return instance;
+}
+
+void AS5600::print_status()
+{
+    // 调用系统基类的标准状态打印,自动打印出运行频率、I2C 端口号等信息
+    I2CSPIDriverBase::print_status();
+
+    // 打印专属信息
+    PX4_INFO("AS5600 Magnetic Encoder is running smoothly.");
+    PX4_INFO("Current Position (rad): %.3f", (double)_last_angle_rad);
 }
 
 void AS5600::print_usage()
@@ -133,14 +141,40 @@ void AS5600::print_usage()
 extern "C" __EXPORT int as5600_main(int argc, char *argv[])
 {
     using ThisDriver = AS5600;
+
     BusCLIArguments cli{true, false};
-    cli.default_i2c_frequency = 400000; // 默认 400kHz Fast Mode
+    cli.default_i2c_frequency = 400000;
+
+    // 请确保 AS5600_I2C_ADDR 已经在你的代码中被定义 (例如 0x36)
     cli.i2c_address = AS5600_I2C_ADDR;
 
-    const char *ch = cli.parseDefaultArguments(argc, argv);
-    if (!ch) {
+    // 解析出 "-X", "-q" 等标志位，并提取出核心动作指令 (start/stop/status)
+    const char *verb = cli.parseDefaultArguments(argc, argv);
+    if (!verb) {
         ThisDriver::print_usage();
         return -1;
     }
-    return ThisDriver::module_main(argc, argv);
+
+    // --- 核心修正点：实例化总线迭代器 ---
+    // 第三个参数用于指定设备类型 ID (DRV_..._DEVTYPE)。
+    // 由于 AS5600 是我们自定义的外设，系统枚举中大概率没有专属它的宏定义，
+    // 所以这里直接传入 0 (相当于 DRV_ANY_DEVTYPE)，让它在所选总线上进行泛型探测。
+    BusInstanceIterator iterator(MODULE_NAME, cli, 0);
+
+    // 将指令与迭代器同时下发给相应的模板处理函数
+    if (!strcmp(verb, "start")) {
+        return ThisDriver::module_start(cli, iterator);
+    }
+
+    if (!strcmp(verb, "stop")) {
+        return ThisDriver::module_stop(iterator);
+    }
+
+    if (!strcmp(verb, "status")) {
+        return ThisDriver::module_status(iterator);
+    }
+
+    // 未知指令
+    ThisDriver::print_usage();
+    return -1;
 }

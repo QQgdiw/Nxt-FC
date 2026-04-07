@@ -1,8 +1,8 @@
 menu "encoder sensor"
-    menuconfig ENCODER_SENSOR
+    menuconfig COMMON_ENCODER_SENSOR
         bool "Common encoder sensors"
         default n
-        select CONFIG_DRIVERS_ENCODER_SENSOR_AS5600
+        select DRIVERS_ENCODER_SENSOR_AS5600
         ---help---
             Enable default set of encoder sensor drivers
     rsource "*/Kconfig"

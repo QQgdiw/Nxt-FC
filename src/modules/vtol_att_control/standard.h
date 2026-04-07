@@ -46,6 +46,7 @@
 #ifndef STANDARD_H
 #define STANDARD_H
 #include "vtol_type.h"
+#include "vtol_att_control_main.h"
 
 class Standard : public VtolType
 {
@@ -91,9 +92,11 @@ private:
 				       )
 	/********** 下面是新增的成员变量和函数声明 **********/
 	int _encoder_sub{-1};
-    	uORB::Publication<actuator_servos_s> _mechanism_servo_pub{ORB_ID(actuator_servos)};
+	float _prev_output_cmd{999.0f};
+	uORB::Publication<vehicle_command_s> _vehicle_cmd_pub{ORB_ID(vehicle_command)};
 
-    	float _current_mechanism_angle{0.0f};
+	float output_cmd{0.0f};
+	float _current_mechanism_angle{0.0f};
 
 };
 #endif
