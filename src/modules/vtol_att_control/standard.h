@@ -47,6 +47,7 @@
 #define STANDARD_H
 #include "vtol_type.h"
 #include "vtol_att_control_main.h"
+#include <systemlib/mavlink_log.h>
 
 class Standard : public VtolType
 {
@@ -91,12 +92,15 @@ private:
     					(ParamFloat<px4::params::VT_MECH_CMD_MC>) _param_vt_mech_cmd_mc
 				       )
 	/********** 下面是新增的成员变量和函数声明 **********/
+	orb_advert_t	_mavlink_log_pub{nullptr};	// mavlink log uORB handle
 	int _encoder_sub{-1};
 	float _prev_output_cmd{999.0f};
 	uORB::Publication<vehicle_command_s> _vehicle_cmd_pub{ORB_ID(vehicle_command)};
 
 	float output_cmd{0.0f};
 	float _current_mechanism_angle{0.0f};
+    	hrt_abstime _trans_start_time{0};
+    	bool _transformation_complete{false};
 
 };
 #endif

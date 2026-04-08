@@ -59,21 +59,15 @@ void Standard::parameters_update()
 	_param_vt_b_trans_ramp.set(math::min(_param_vt_b_trans_ramp.get(), _param_vt_b_trans_dur.get()));
 }
 
+
 void Standard::update_vtol_state()
 {
-	/* After flipping the switch the vehicle will start the pusher (or tractor) motor, picking up
-	 * forward speed. After the vehicle has picked up enough speed the rotors shutdown.
-	 * For the back transition the pusher motor is immediately stopped and rotors reactivated.
-	 */
+	// After flipping the switch the vehicle will start the pusher (or tractor) motor, picking up
+	// forward speed. After the vehicle has picked up enough speed the rotors shutdown.
+	// For the back transition the pusher motor is immediately stopped and rotors reactivated.
 
 	float mc_weight = _mc_roll_weight;
 
-	// if (_vtol_vehicle_status->fixed_wing_system_failure) {
-	// 	// Failsafe event, engage mc motors immediately
-	// 	_vtol_mode = vtol_mode::MC_MODE;
-	// 	_pusher_throttle = 0.0f;
-
-	// } else
 	if (!_attc->is_fixed_wing_requested()) {
 
 		// the transition to fw mode switch is off
@@ -81,122 +75,26 @@ void Standard::update_vtol_state()
 			// in mc mode
 			_vtol_mode = vtol_mode::MC_MODE;
 			mc_weight = 1.0f;
+			//mavlink_log_critical(&_mavlink_log_pub, "MC MODE");
 
-		} else if (_vtol_mode == vtol_mode::FW_MODE) {
+		} else {
 			// Regular backtransition
-			resetTransitionStates();
+			//resetTransitionStates();
 			_vtol_mode = vtol_mode::TRANSITION_TO_MC;
-
-		} else if (_vtol_mode == vtol_mode::TRANSITION_TO_FW) {
-			// failsafe back to mc mode
-			// 此处需要增加从TRANSITION_TO_FW切换为MC_MODE的条件处理
-			// 判断编码器当前角度是否已经达到MC_MODE的目标角度
-
-			// bool updated;
-			// orb_check(_encoder_sub, &updated);
-			// if (updated) {
-			// 	sensor_encoder_s encoder_data;
-			// 	orb_copy(ORB_ID(sensor_encoder), _encoder_sub, &encoder_data);
-			// 	_current_mechanism_angle = encoder_data.position_rad;
-			// }
-			// float target_angle = _param_vt_mech_ang_mc.get();
-
-			// if (target_angle > _current_mechanism_angle) {
-
-			// 	output_cmd = _param_vt_mech_cmd_mc.get();
-			// }
-			// else{
-				_vtol_mode = vtol_mode::MC_MODE;
-				mc_weight = 1.0f;
-				_pusher_throttle = 0.0f;
-			// 	output_cmd = 0.0f;
-			// }
-
-		} else if (_vtol_mode == vtol_mode::TRANSITION_TO_MC) {		// 初步确定卡在此处
-			// speed exit condition: use ground if valid, otherwise airspeed
-			// bool exit_backtransition_speed_condition = false;
-
-			// if (_local_pos->v_xy_valid) {
-			// 	const Dcmf R_to_body(Quatf(_v_att->q).inversed());
-			// 	const Vector3f vel = R_to_body * Vector3f(_local_pos->vx, _local_pos->vy, _local_pos->vz);
-			// 	exit_backtransition_speed_condition = vel(0) < _param_mpc_xy_cruise.get();
-
-			// } else if (PX4_ISFINITE(_airspeed_validated->calibrated_airspeed_m_s)) {
-			// 	exit_backtransition_speed_condition = _airspeed_validated->calibrated_airspeed_m_s < _param_mpc_xy_cruise.get();
-			// }
-
-			// const bool exit_backtransition_time_condition = _time_since_trans_start > _param_vt_b_trans_dur.get();
-
-			// 此处需要增加从TRANSITION_TO_MC切换为MC_MODE的条件处理
-			// 判断编码器当前角度是否已经达到MC_MODE的目标角度
-
-			// bool updated;
-			// orb_check(_encoder_sub, &updated);
-			// if (updated) {
-			// 	sensor_encoder_s encoder_data;
-			// 	orb_copy(ORB_ID(sensor_encoder), _encoder_sub, &encoder_data);
-			// 	_current_mechanism_angle = encoder_data.position_rad;
-			// }
-			// float target_angle = _param_vt_mech_ang_mc.get();
-
-			// bool exit_backtransition_encoder_condition = false;
-			// if (target_angle > _current_mechanism_angle) {
-			// 	output_cmd = _param_vt_mech_cmd_mc.get();
-			// }
-			// else{
-			// 	exit_backtransition_encoder_condition = true;
-			// 	output_cmd = 0.0f;
-			// }
-			// if ((can_transition_on_ground() || exit_backtransition_speed_condition || exit_backtransition_time_condition) && exit_backtransition_encoder_condition) {
-				_vtol_mode = vtol_mode::MC_MODE;
-			// }
-
+			//mavlink_log_critical(&_mavlink_log_pub, "TRANSITION TO MC");
 		}
-
 	} else {
 		// the transition to fw mode switch is on
-		if (_vtol_mode == vtol_mode::MC_MODE || _vtol_mode == vtol_mode::TRANSITION_TO_MC) {
-			// start transition to fw mode
-			/* NOTE: The failsafe transition to fixed-wing was removed because it can result in an
-			 * unsafe flying state. */
-			resetTransitionStates();
-			_vtol_mode = vtol_mode::TRANSITION_TO_FW;
-
-		} else if (_vtol_mode == vtol_mode::FW_MODE) {
+		if (_vtol_mode == vtol_mode::FW_MODE) {
 			// in fw mode
 			_vtol_mode = vtol_mode::FW_MODE;
 			mc_weight = 0.0f;
+			//mavlink_log_critical(&_mavlink_log_pub, "FW MODE");
 
-		} else if (_vtol_mode == vtol_mode::TRANSITION_TO_FW) {
-
-			if (isFrontTransitionCompleted()) {
-			// 这里需要增加切换到FW_MODE的条件处理
-			// 判断编码器当前角度是否已经达到FW_MODE的目标角度
-			bool updated;
-			orb_check(_encoder_sub, &updated);
-			if (updated) {
-				sensor_encoder_s encoder_data;
-				orb_copy(ORB_ID(sensor_encoder), _encoder_sub, &encoder_data);
-				_current_mechanism_angle = encoder_data.position_rad;
-			}
-			float target_angle = _param_vt_mech_ang_fw.get();
-
-			if (target_angle < _current_mechanism_angle) {
-				output_cmd = _param_vt_mech_cmd_fw.get();
-			}
-			else{
-				output_cmd = 0.0f;
-				_vtol_mode = vtol_mode::FW_MODE;
-
-				// don't set pusher throttle here as it's being ramped up elsewhere
-				_trans_finished_ts = hrt_absolute_time();
-			}
-
-				// _vtol_mode = vtol_mode::FW_MODE;
-
-				// // don't set pusher throttle here as it's being ramped up elsewhere
-				// _trans_finished_ts = hrt_absolute_time();
-			}
+		} else {
+			resetTransitionStates();
+			_vtol_mode = vtol_mode::TRANSITION_TO_FW;
+			//mavlink_log_critical(&_mavlink_log_pub, "TRANSITION TO FW");
 		}
 	}
 
@@ -225,168 +123,102 @@ void Standard::update_vtol_state()
 	}
 }
 
+
 void Standard::update_transition_state()
 {
-	const hrt_abstime now = hrt_absolute_time();
-	float mc_weight = 0.0f;
+	float mc_weight = _mc_roll_weight;
 
-	VtolType::update_transition_state();
-
-
-	// we get attitude setpoint from a multirotor flighttask if climbrate is controlled.
-	// in any other case the fixed wing attitude controller publishes attitude setpoint from manual stick input.
-	if (_v_control_mode->flag_control_climb_rate_enabled) {
-		// we need the incoming (virtual) attitude setpoints (both mc and fw) to be recent, otherwise return (means the previous setpoint stays active)
-		if (_mc_virtual_att_sp->timestamp < (now - 1_s) || _fw_virtual_att_sp->timestamp < (now - 1_s)) {
-			return;
-		}
-
-		memcpy(_v_att_sp, _mc_virtual_att_sp, sizeof(vehicle_attitude_setpoint_s));
-		_v_att_sp->roll_body = _fw_virtual_att_sp->roll_body;
-
-	} else {
-		// we need a recent incoming (fw virtual) attitude setpoint, otherwise return (means the previous setpoint stays active)
-		if (_fw_virtual_att_sp->timestamp < (now - 1_s)) {
-			return;
-		}
-
-		memcpy(_v_att_sp, _fw_virtual_att_sp, sizeof(vehicle_attitude_setpoint_s));
-		_v_att_sp->thrust_body[2] = -_fw_virtual_att_sp->thrust_body[0];
+	// 1. 初始化过渡状态时间戳 (每次进入过渡态时只执行一次)
+	if (_trans_start_time == 0) {
+		_trans_start_time = hrt_absolute_time();
+		_transformation_complete = false;
+		//mavlink_log_critical(&_mavlink_log_pub, "Transformation mechanism started.");
 	}
 
+	// 2. 更新编码器数据 (你提供的逻辑)
+	bool updated;
+	orb_check(_encoder_sub, &updated);
+	if (updated) {
+		sensor_encoder_s encoder_data;
+		orb_copy(ORB_ID(sensor_encoder), _encoder_sub, &encoder_data);
+		_current_mechanism_angle = encoder_data.position_rad;
+	}
+
+	// 3. 超时保护逻辑 (检测变形是否卡死)
+	float timeout_us = 10.0f * 1000000.0f; // 从参数获取的超时时间(秒转微秒)
+	if (hrt_absolute_time() - _trans_start_time > timeout_us && !_transformation_complete) {
+		//mavlink_log_critical(&_mavlink_log_pub, "TRANSFORMATION TIMEOUT! Mechanism may be stuck.");
+		// 处理卡死情况：这里选择安全回退到 MC 模式
+		_vtol_mode = vtol_mode::MC_MODE;
+		mc_weight = 1.0f;
+		_trans_start_time = 0;
+		return;
+	}
+
+	// =========================================================================
+	// 4. 方向 A: 多旋翼 -> 漫游车 (MC -> FW)
+	// =========================================================================
 	if (_vtol_mode == vtol_mode::TRANSITION_TO_FW) {
-		if (_param_vt_psher_slew.get() <= FLT_EPSILON) {
-			// just set the final target throttle value
-			_pusher_throttle = _param_vt_f_trans_thr.get();
+		// 在变形期间，保持多旋翼姿态全权控制 (确保如果在坡上或有风时车身稳定)
+		mc_weight = 1.0f;
 
-		} else if (_pusher_throttle <= _param_vt_f_trans_thr.get()) {
-			// ramp up throttle to the target throttle value
-			const float dt = math::min((now - _last_time_pusher_transition_update) / 1e6f, 0.05f);
-			_pusher_throttle = math::min(_pusher_throttle +
-						     _param_vt_psher_slew.get() * dt, _param_vt_f_trans_thr.get());
+		// 目标角度是漫游车(FW)的角度
+		float target_angle = _param_vt_mech_ang_fw.get();
 
-			_last_time_pusher_transition_update = now;
-		}
-
-		_airspeed_trans_blend_margin = getTransitionAirspeed() - getBlendAirspeed();
-
-		// do blending of mc and fw controls if a blending airspeed has been provided and the minimum transition time has passed
-		if (_airspeed_trans_blend_margin > 0.0f &&
-		    PX4_ISFINITE(_airspeed_validated->calibrated_airspeed_m_s) &&
-		    _airspeed_validated->calibrated_airspeed_m_s > 0.0f &&
-		    _airspeed_validated->calibrated_airspeed_m_s >= getBlendAirspeed() &&
-		    _time_since_trans_start > getMinimumFrontTransitionTime()) {
-
-			mc_weight = 1.0f - fabsf(_airspeed_validated->calibrated_airspeed_m_s - getBlendAirspeed()) /
-				    _airspeed_trans_blend_margin;
-			// time based blending when no airspeed sensor is set
-
-		} else if (!_param_fw_use_airspd.get() || !PX4_ISFINITE(_airspeed_validated->calibrated_airspeed_m_s)) {
-			mc_weight = 1.0f - _time_since_trans_start / getMinimumFrontTransitionTime();
-			mc_weight = math::constrain(2.0f * mc_weight, 0.0f, 1.0f);
-
-		}
-
-		// ramp up FW_PSP_OFF
-		_v_att_sp->pitch_body = math::radians(_param_fw_psp_off.get()) * (1.0f - mc_weight);
-
-		_v_att_sp->thrust_body[0] = _pusher_throttle;
-
-		const Quatf q_sp(Eulerf(_v_att_sp->roll_body, _v_att_sp->pitch_body, _v_att_sp->yaw_body));
-		q_sp.copyTo(_v_att_sp->q_d);
-
-	} else if (_vtol_mode == vtol_mode::TRANSITION_TO_MC) {
-
-		if (_v_control_mode->flag_control_climb_rate_enabled) {
-			// control backtransition deceleration using pitch.
-			_v_att_sp->pitch_body = update_and_get_backtransition_pitch_sp();
-		}
-
-		const Quatf q_sp(Eulerf(_v_att_sp->roll_body, _v_att_sp->pitch_body, _v_att_sp->yaw_body));
-		q_sp.copyTo(_v_att_sp->q_d);
-
-		_pusher_throttle = 0.0f;
-
-		// continually increase mc attitude control as we transition back to mc mode
-		if (_param_vt_b_trans_ramp.get() > FLT_EPSILON) {
-			mc_weight = _time_since_trans_start / _param_vt_b_trans_ramp.get();
+		// 假设编码器角度从小到大变化 (MC较小，Rover较大)
+		// 注意：这里的方向判断 (< 或 >) 取决于你的机械设计和编码器安装方向
+		if (_current_mechanism_angle > target_angle - 0.05f) { // 加一点死区容差 (0.05rad)
+		output_cmd = _param_vt_mech_cmd_fw.get();
+		} else {
+		// 变形到位，切换模式！
+		_transformation_complete = true;
+		_vtol_mode = vtol_mode::FW_MODE; // 切入漫游车模式
+		mc_weight = 0.0f;               // 彻底关闭多旋翼控制权
+		output_cmd = 0.0f;     // 停止变形机构电机
+		_trans_start_time = 0;           // 重置时间戳，为下次变形做准备
+		//mavlink_log_critical(&_mavlink_log_pub, "Transformed to Rover Mode.");
 		}
 	}
+	// =========================================================================
+	// 5. 方向 B: 漫游车 -> 多旋翼 (FW -> MC)
+	// =========================================================================
+	else if (_vtol_mode == vtol_mode::TRANSITION_TO_MC) {
+		// 变形回多旋翼期间，我们依然让多旋翼控制权为0，直到变形完成再开启旋翼
+		mc_weight = 1.0f;
 
+		// 目标角度是多旋翼(MC)的角度
+		float target_angle = _param_vt_mech_ang_mc.get();
 
+		if (_current_mechanism_angle < target_angle + 0.05f) { // 死区容差
+		output_cmd = -_param_vt_mech_cmd_mc.get(); // 反向驱动机构
+		} else {
+		// 变形到位，切换模式！
+		_transformation_complete = true;
+		_vtol_mode = vtol_mode::MC_MODE; // 切入多旋翼模式
+		mc_weight = 1.0f;               // 恢复旋翼全权控制 (准备起飞)
+		output_cmd = 0.0f;     // 停止变形机构
+		_trans_start_time = 0;
+		//mavlink_log_critical(&_mavlink_log_pub, "Transformed to Multicopter Mode.");
+		}
+	}
 	mc_weight = math::constrain(mc_weight, 0.0f, 1.0f);
 
 	_mc_roll_weight = mc_weight;
 	_mc_pitch_weight = mc_weight;
 	_mc_yaw_weight = mc_weight;
 	_mc_throttle_weight = mc_weight;
-
 }
-/*
-void Standard::update_transition_state()
-{
-	// ====================================================================
-	// 在机械变形期间，保证所有动力输出通道绝对静止！
-	// ====================================================================
-
-	if (_vtol_mode == vtol_mode::TRANSITION_TO_FW) {
-		// 正在变形成漫游车 (机臂收起中)
-
-		// 1. 再次死锁多旋翼控制权重，防止被其他宏观模块意外拉起
-		_mc_roll_weight = 0.0f;
-		_mc_pitch_weight = 0.0f;
-		_mc_yaw_weight = 0.0f;
-		_mc_throttle_weight = 0.0f;
-
-		// 2. 绝对禁止在变形期间驱动车轮 / 推进电机
-		_pusher_throttle = 0.0f;
-
-		// 3. 将输出到执行器的期望推力全部清零
-		_v_att_sp->thrust_body[0] = 0.0f; // 前向推力清零
-		_v_att_sp->thrust_body[2] = 0.0f; // 垂直升力清零
-
-	} else if (_vtol_mode == vtol_mode::TRANSITION_TO_MC) {
-		// 正在变形成多旋翼 (机臂展开中)
-
-		// 1. 展开期间同样保持绝对静止，严禁旋翼转动打到地面
-		_mc_roll_weight = 0.0f;
-		_mc_pitch_weight = 0.0f;
-		_mc_yaw_weight = 0.0f;
-		_mc_throttle_weight = 0.0f;
-
-		// 2. 切断车轮动力
-		_pusher_throttle = 0.0f;
-
-		// 3. 期望推力清零
-		_v_att_sp->thrust_body[0] = 0.0f;
-		_v_att_sp->thrust_body[2] = 0.0f;
-	}
-
-	// ====================================================================
-	// 保持系统姿态设定点有效，防止底层数学运算出现 NaN (非数字) 导致系统崩溃
-	// ====================================================================
-
-	// 在变形期间，我们不关心飞机指向哪里，但必须给 PID 控制器喂一个合法的姿态。
-	// 直接将多旋翼的虚拟期望姿态（通常在地面是平放的四元数）原样复制过去即可。
-	Quatf q_sp(_mc_virtual_att_sp->q_d);
-	q_sp.copyTo(_v_att_sp->q_d);
-
-	// 不再产生额外的偏航率或俯仰率设定点
-	_v_att_sp->roll_body = 0.0f;
-	_v_att_sp->pitch_body = 0.0f;
-	_v_att_sp->yaw_body = 0.0f;
-}*/
 
 void Standard::update_mc_state()
 {
-	VtolType::update_mc_state();
+	//VtolType::update_mc_state();
 
-	_pusher_throttle = VtolType::pusher_assist();
+	//_pusher_throttle = VtolType::pusher_assist();
 }
 
 void Standard::update_fw_state()
 {
-	VtolType::update_fw_state();
+	//VtolType::update_fw_state();
 }
 
 /**
@@ -441,19 +273,19 @@ void Standard::fill_actuator_outputs()
 
 	// FALLTHROUGH
 	case vtol_mode::TRANSITION_TO_MC:
-		// MC actuators:
-		_torque_setpoint_0->xyz[0] = _vehicle_torque_setpoint_virtual_mc->xyz[0] * _mc_roll_weight;
-		_torque_setpoint_0->xyz[1] = _vehicle_torque_setpoint_virtual_mc->xyz[1] * _mc_pitch_weight;
-		_torque_setpoint_0->xyz[2] = _vehicle_torque_setpoint_virtual_mc->xyz[2] * _mc_yaw_weight;
-		_thrust_setpoint_0->xyz[2] = _vehicle_thrust_setpoint_virtual_mc->xyz[2] * _mc_throttle_weight;
+		// // MC actuators:
+		// _torque_setpoint_0->xyz[0] = _vehicle_torque_setpoint_virtual_mc->xyz[0] * _mc_roll_weight;
+		// _torque_setpoint_0->xyz[1] = _vehicle_torque_setpoint_virtual_mc->xyz[1] * _mc_pitch_weight;
+		// _torque_setpoint_0->xyz[2] = _vehicle_torque_setpoint_virtual_mc->xyz[2] * _mc_yaw_weight;
+		// _thrust_setpoint_0->xyz[2] = _vehicle_thrust_setpoint_virtual_mc->xyz[2] * _mc_throttle_weight;
 
-		// FW actuators
-		_torque_setpoint_1->xyz[0] = _vehicle_torque_setpoint_virtual_fw->xyz[0] * (1.f - _mc_roll_weight);
-		_torque_setpoint_1->xyz[1] = _vehicle_torque_setpoint_virtual_fw->xyz[1] * (1.f - _mc_pitch_weight);
-		_torque_setpoint_1->xyz[2] = _vehicle_torque_setpoint_virtual_fw->xyz[2] * (1.f - _mc_yaw_weight);
-		_thrust_setpoint_0->xyz[0] = _pusher_throttle;
+		// // FW actuators
+		// _torque_setpoint_1->xyz[0] = _vehicle_torque_setpoint_virtual_fw->xyz[0] * (1.f - _mc_roll_weight);
+		// _torque_setpoint_1->xyz[1] = _vehicle_torque_setpoint_virtual_fw->xyz[1] * (1.f - _mc_pitch_weight);
+		// _torque_setpoint_1->xyz[2] = _vehicle_torque_setpoint_virtual_fw->xyz[2] * (1.f - _mc_yaw_weight);
+		// _thrust_setpoint_0->xyz[0] = _pusher_throttle;
 
-		break;
+		// break;
 
 	case vtol_mode::FW_MODE:
 
